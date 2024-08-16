@@ -46,11 +46,14 @@ func SignUp() gin.HandlerFunc {
 		defer cancel()
 		var user models.User
 		if err := c.BindJSON(&user); err != nil {
+			log.Println(err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		fmt.Println("user : %v", user)
 		validationErr := Validate.Struct(user)
 		if validationErr != nil {
+			log.Println(validationErr)
 			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr})
 			return
 		}
@@ -91,13 +94,14 @@ func SignUp() gin.HandlerFunc {
 		if inserterr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "the user did not get created"})
 		}
-		c.JSON(http.StatusCreated, gin.H{"error": "Successfully signed in!"})
+		c.JSON(http.StatusCreated, "Successfully Signed Up!!")
 
 	}
 }
 func SearchProduct() gin.HandlerFunc {
+
 	return func(c *gin.Context) {
-		var prodcutList []models.Product
+		var productList []models.Product
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		defer cancel()
 		cursor, err := ProductCollection.Find(ctx, bson.D{{}})
@@ -105,18 +109,19 @@ func SearchProduct() gin.HandlerFunc {
 			c.IndentedJSON(http.StatusInternalServerError, "something wnet wrong,please try again afer some time")
 			return
 		}
-		err = cursor.All(ctx, &prodcutList)
+		defer cursor.Close(ctx)
+		err = cursor.All(ctx, &productList)
 		if err != nil {
 			log.Println(err)
-			c.AbortWithStatus(http.StatusInternalServerError)
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Failed to decode product list"})
 			return
 		}
-		defer cursor.Close(ctx)
+
 		if err := cursor.Err(); err != nil {
 			log.Println(err)
-			c.IndentedJSON(400, "Invalid")
+			c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Cursor error"})
 		}
-		c.IndentedJSON(200, prodcutList)
+		c.IndentedJSON(200, productList)
 	}
 }
 func SearchProductByQuery() gin.HandlerFunc {
@@ -183,19 +188,27 @@ func Login() gin.HandlerFunc {
 func ProductViewerAdmin() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
-		var products models.Product
 		defer cancel()
-		if err := c.BindJSON(&products); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+
+		var product models.Product
+
+		// Bind the incoming JSON to the product struct
+		if err := c.BindJSON(&product); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON data: " + err.Error()})
 			return
 		}
-		products.Product_ID = primitive.NewObjectID()
-		_, anyerr := ProductCollection.InsertOne(ctx, products)
-		if anyerr != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Not Created"})
+
+		// Set the product ID to a new ObjectID
+		product.Product_ID = primitive.NewObjectID()
+
+		// Insert the new product into the MongoDB collection
+		_, err := ProductCollection.InsertOne(ctx, product)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create product: " + err.Error()})
 			return
 		}
-		defer cancel()
-		c.JSON(http.StatusOK, "Successfully added our Product Admin!!")
+
+		// Return success message
+		c.JSON(http.StatusOK, gin.H{"message": "Successfully added the product!"})
 	}
 }
