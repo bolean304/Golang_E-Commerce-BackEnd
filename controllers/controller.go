@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/bolean304/e-commerce-cart/database"
@@ -168,7 +169,9 @@ func Login() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 			return
 		}
-		err := UserCollection.FindOne(ctx, bson.M{"email": user.Email}).Decode(&foundUser)
+		// Create a case-insensitive filter using $regex and $options
+		filter := bson.M{"email": bson.M{"$regex": "^" + strings.ToLower(*user.Email) + "$", "$options": "i"}}
+		err := UserCollection.FindOne(ctx, filter).Decode(&foundUser)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "login or password incorrect"})
 			return
@@ -181,7 +184,7 @@ func Login() gin.HandlerFunc {
 		}
 		token, refreshToken, _ := generate.TokenGenerator(*foundUser.Email, *foundUser.First_Name, *foundUser.Last_Name, foundUser.User_ID)
 		generate.UpdateAllTokens(token, refreshToken, foundUser.User_ID)
-		c.JSON(http.StatusFound, foundUser)
+		c.JSON(http.StatusAccepted, foundUser)
 	}
 }
 
