@@ -11,7 +11,7 @@ import (
 )
 
 func DBSet() *mongo.Client {
-	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://admin:password@localhost:27017"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func DBSet() *mongo.Client {
 	}
 	err = client.Ping(context.TODO(), nil)
 	if err != nil {
-		log.Println("failed to connect to mongodb")
+		log.Printf("failed to connect to mongodb : %v",err)
 		return nil
 	}
 	fmt.Println("successfully connected to mongodb")
