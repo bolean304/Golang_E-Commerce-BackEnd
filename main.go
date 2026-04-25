@@ -12,12 +12,13 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"time"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8000"
+		port = "8080"
 	}
 	app := controllers.NewApplication(
 		database.ProductData(database.Client, "Products"),
@@ -25,6 +26,8 @@ func main() {
 	)
 	router := gin.New()
 	router.Use(gin.Logger())
+	// 👇 ADD THIS LINE
+router.Use(middleware.PrometheusMiddleware())
 	// Use the CORS middleware
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000"}, // Replace with your React app's URL
@@ -34,8 +37,10 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	routes.UserRoutes(router)
 	router.Use(middleware.Authentication())
+	
 	router.GET("/addtocart", app.AddToCart())
 	router.GET("/removeitem", app.RemoveItem())
 	router.GET("/instantbuy", app.InstantBuy())
