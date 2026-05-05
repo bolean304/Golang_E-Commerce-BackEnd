@@ -19,8 +19,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var UserCollection *mongo.Collection = database.UserData(database.Client, "Users")
-var ProductCollection *mongo.Collection = database.ProductData(database.Client, "Product")
+var UserCollection *mongo.Collection = database.UserData(database.Client, database.UsersCollection)
+var ProductCollection *mongo.Collection = database.ProductData(database.Client, database.ProductsCollection)
 var Validate = validator.New()
 
 func HashPassword(password string) string {

@@ -8,27 +8,27 @@ import (
 
 type User struct {
 	ID              primitive.ObjectID `json:"_id" bson:"_id"`
-	First_Name      *string            `json:"first_name" validate:"required,min=2,max=30"`
-	Last_Name       *string            `json:"last_name"  validate:"required,min=2,max=30"`
-	Password        *string            `json:"password"   validate:"required,min=6"`
-	Email           *string            `json:"email"      validate:"required"`
-	Phone           *string            `json:"phone"      validate:"required"`
-	Token           *string            `json:"token"`
-	Refresh_Token   *string            `josn:"refresh_token"`
-	Created_At      time.Time          `json:"created_at"`
-	Updated_At      time.Time          `json:"updtaed_at"`
-	User_ID         string             `json:"user_id"`
+	First_Name      *string            `json:"first_name" bson:"first_name" validate:"required,min=2,max=30"`
+	Last_Name       *string            `json:"last_name" bson:"last_name" validate:"required,min=2,max=30"`
+	Password        *string            `json:"password" bson:"password" validate:"required,min=6"`
+	Email           *string            `json:"email" bson:"email" validate:"required"`
+	Phone           *string            `json:"phone" bson:"phone" validate:"required"`
+	Token           *string            `json:"token" bson:"token"`
+	Refresh_Token   *string            `json:"refresh_token" bson:"refresh_token"`
+	Created_At      time.Time          `json:"created_at" bson:"created_at"`
+	Updated_At      time.Time          `json:"updated_at" bson:"updated_at"`
+	User_ID         string             `json:"user_id" bson:"user_id"`
 	UserCart        []ProductUser      `json:"usercart" bson:"usercart"`
 	Address_Details []Address          `json:"address" bson:"address"`
 	Order_Status    []Order            `json:"orders" bson:"orders"`
 }
 
 type Product struct {
-	Product_ID   primitive.ObjectID `bson:"_id"`
-	Product_Name *string            `json:"product_name"`
-	Price        *uint64            `json:"price"`
-	Rating       *uint8             `json:"rating"`
-	Image        *string            `json:"image"`
+	Product_ID   primitive.ObjectID `json:"_id" bson:"_id"`
+	Product_Name *string            `json:"product_name" bson:"product_name"`
+	Price        *uint64            `json:"price" bson:"price"`
+	Rating       *uint8             `json:"rating" bson:"rating"`
+	Image        *string            `json:"image" bson:"image"`
 }
 
 type ProductUser struct {

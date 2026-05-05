@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/bolean304/e-commerce-cart/controllers"
 	"github.com/bolean304/e-commerce-cart/database"
@@ -11,7 +12,6 @@ import (
 	"github.com/bolean304/e-commerce-cart/routes"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"time"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -21,13 +21,13 @@ func main() {
 		port = "8080"
 	}
 	app := controllers.NewApplication(
-		database.ProductData(database.Client, "Products"),
-		database.UserData(database.Client, "Users"),
+		database.ProductData(database.Client, database.ProductsCollection),
+		database.UserData(database.Client, database.UsersCollection),
 	)
 	router := gin.New()
 	router.Use(gin.Logger())
 	// 👇 ADD THIS LINE
-router.Use(middleware.PrometheusMiddleware())
+	router.Use(middleware.PrometheusMiddleware())
 	// Use the CORS middleware
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000"}, // Replace with your React app's URL
@@ -39,13 +39,16 @@ router.Use(middleware.PrometheusMiddleware())
 	}))
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	routes.UserRoutes(router)
-	router.Use(middleware.Authentication())
-	
-	router.GET("/addtocart", app.AddToCart())
-	router.GET("/removeitem", app.RemoveItem())
-	router.GET("/instantbuy", app.InstantBuy())
-	router.GET("/checkout", app.BuyFromCart())
-	fmt.Println("port : %v", port)
+
+	// Protected routes
+	auth := router.Group("/")
+	auth.Use(middleware.Authentication())
+
+	auth.GET("/addtocart", app.AddToCart())
+	auth.GET("/removeitem", app.RemoveItem())
+	auth.GET("/instantbuy", app.InstantBuy())
+	auth.GET("/checkout", app.BuyFromCart())
+	fmt.Printf("port : %v\n", port)
 	// Run the server on the specified port
 	log.Fatal(router.Run(":" + port))
 }
