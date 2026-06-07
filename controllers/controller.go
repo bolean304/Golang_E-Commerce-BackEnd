@@ -43,7 +43,7 @@ func VerifyPassword(userpassword, givenpassword string) (bool, string) {
 
 func SignUp() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		var user models.User
 		if err := c.BindJSON(&user); err != nil {
@@ -51,17 +51,25 @@ func SignUp() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		fmt.Println("user : %v", user)
+		email := strings.TrimSpace(
+			strings.ToLower(*user.Email),
+		)
+
+		user.Email = &email
 		validationErr := Validate.Struct(user)
 		if validationErr != nil {
 			log.Println(validationErr)
-			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr})
+			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
 			return
 		}
 		count, err := UserCollection.CountDocuments(ctx, bson.M{"email": user.Email})
 		if err != nil {
-			log.Panic(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			log.Printf("failed checking email: %v", err)
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "internal server error"},
+			)
+
 			return
 		}
 		if count > 0 {
@@ -71,8 +79,11 @@ func SignUp() gin.HandlerFunc {
 
 		count, err = UserCollection.CountDocuments(ctx, bson.M{"phone": user.Phone})
 		if err != nil {
-			log.Panic(err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			log.Printf("failed checking phone: %v", err)
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "internal server error"},
+			)
 			return
 		}
 		if count > 0 {
@@ -81,21 +92,29 @@ func SignUp() gin.HandlerFunc {
 		}
 		password := HashPassword(*user.Password)
 		user.Password = &password
-		user.Created_At, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		user.Updated_At, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
+		now := time.Now().UTC()
+
+		user.Created_At = now
+		user.Updated_At = now
+
 		user.ID = primitive.NewObjectID()
 		user.User_ID = user.ID.Hex()
-		token, refreshtoken, _ := generate.TokenGenerator(*user.Email, *user.First_Name, *user.Last_Name, user.User_ID)
-		user.Token = &token
-		user.Refresh_Token = &refreshtoken
+
 		user.UserCart = make([]models.ProductUser, 0)
 		user.Address_Details = make([]models.Address, 0)
 		user.Order_Status = make([]models.Order, 0)
 		_, inserterr := UserCollection.InsertOne(ctx, user)
 		if inserterr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "the user did not get created"})
+			return
 		}
-		c.JSON(http.StatusCreated, "Successfully Signed Up!!")
+		c.JSON(
+			http.StatusCreated,
+			gin.H{
+				"message": "user created successfully",
+				"user_id": user.User_ID,
+			},
+		)
 
 	}
 }
